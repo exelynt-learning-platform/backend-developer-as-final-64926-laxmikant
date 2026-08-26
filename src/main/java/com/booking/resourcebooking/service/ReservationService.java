@@ -40,6 +40,10 @@ public class ReservationService {
         Resource resource = resourceRepository.findById(request.getResourceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
 
+        if (request.getStartTime() == null || request.getEndTime() == null) {
+            throw new BadRequestException("Start time and end time are required");
+        }
+
         if (!request.getStartTime().isBefore(request.getEndTime())) {
             throw new BadRequestException("Start time must be before end time");
         }
@@ -84,6 +88,10 @@ public class ReservationService {
         Resource resource = resourceRepository.findById(request.getResourceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
 
+        if (request.getStartTime() == null || request.getEndTime() == null) {
+            throw new BadRequestException("Start time and end time are required");
+        }
+
         if (!request.getStartTime().isBefore(request.getEndTime())) {
             throw new BadRequestException("Start time must be before end time");
         }
@@ -123,8 +131,8 @@ public class ReservationService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Page<Reservation> page = isAdmin(user)
-                ? reservationRepository.searchReservations(null, status, minPrice, maxPrice, pageable)
-                : reservationRepository.searchReservations(user, status, minPrice, maxPrice, pageable);
+                ? reservationRepository.searchAllReservations(status, minPrice, maxPrice, pageable)
+                : reservationRepository.searchUserReservations(user, status, minPrice, maxPrice, pageable);
 
         return page.map(ReservationResponse::fromEntity);
     }

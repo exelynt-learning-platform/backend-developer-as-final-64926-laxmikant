@@ -4,11 +4,10 @@ import com.booking.resourcebooking.dto.ReservationRequest;
 import com.booking.resourcebooking.dto.ReservationResponse;
 import com.booking.resourcebooking.entity.ReservationStatus;
 import com.booking.resourcebooking.service.ReservationService;
+import com.booking.resourcebooking.util.PageableUtils;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,7 +42,7 @@ public class ReservationController {
             Authentication authentication) {
 
         String username = authentication.getName();
-        Pageable pageable = createPageable(page, size, sort);
+        Pageable pageable = PageableUtils.createPageable(page, size, sort);
 
         return reservationService.searchReservations(
                 username,
@@ -77,17 +76,5 @@ public class ReservationController {
             Authentication authentication) {
         String username = authentication.getName();
         reservationService.deleteReservation(id, username);
-    }
-
-    private Pageable createPageable(int page, int size, String sort) {
-        if (sort == null || sort.isBlank()) {
-            return PageRequest.of(page, size);
-        }
-        String[] sortParts = sort.split(",");
-        String property = sortParts[0].trim();
-        Sort.Direction direction = (sortParts.length > 1 && "desc".equalsIgnoreCase(sortParts[1].trim()))
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-        return PageRequest.of(page, size, Sort.by(direction, property));
     }
 }
