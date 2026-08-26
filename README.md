@@ -9,7 +9,7 @@ A RESTful Resource Booking API built with **Spring Boot**, **Java 17**, **Spring
 | Layer | Technology |
 |---|---|
 | Language | Java 17 |
-| Framework | Spring Boot 4.1.1 |
+| Framework | Spring Boot 3.2.5 |
 | Security | Spring Security + JWT (jjwt 0.12.6) |
 | Database | MySQL (via Spring Data JPA / Hibernate) |
 | API Docs | SpringDoc OpenAPI (Swagger UI) |
