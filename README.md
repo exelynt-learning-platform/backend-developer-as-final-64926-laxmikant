@@ -1,302 +1,295 @@
 # Resource Booking System
 
-A RESTful Resource Booking API built with **Spring Boot**, **Java 17**, **Spring Security**, **JWT**, and **MySQL**. The system allows users to view available resources and manage their reservations, while administrators have full CRUD access to both resources and reservations.
+A RESTful Resource Booking System built with **Spring Boot 3.2.5**, **Java 17**, **Spring Security**, **JWT**, and **H2 / MySQL / PostgreSQL**.
+
+The system provides complete Role-Based Access Control (**RBAC**) for **ADMIN** and **USER** roles, allowing users to view available resources and manage their own reservations while administrators maintain full operational control.
 
 ---
 
-## Tech Stack
+## Technical Stack
 
-| Layer | Technology |
-|---|---|
-| Language | Java 17 |
-| Framework | Spring Boot 3.2.5 |
-| Security | Spring Security + JWT (jjwt 0.12.6) |
-| Database | MySQL (via Spring Data JPA / Hibernate) |
-| API Docs | SpringDoc OpenAPI (Swagger UI) |
-| Build Tool | Maven |
-| Testing | JUnit 5, Mockito, MockMvc |
+- **Java Version**: 17+ (Java 17 / 21 compatible)
+- **Framework**: Spring Boot 3.2.5
+- **Security**: Spring Security 6 with JWT (JSON Web Tokens)
+- **Database**: H2 (In-Memory for Dev/Test) / MySQL 8+ / PostgreSQL (Production)
+- **Persistence**: Spring Data JPA / Hibernate 6
+- **Documentation**: OpenAPI 3.0 / Swagger UI (`springdoc-openapi`)
+- **Build Tool**: Apache Maven (`./mvnw` wrapper included)
 
 ---
 
-## Project Structure
+## Features
 
-```
-src/main/java/com/booking/resourcebooking/
-├── controller/
-│   ├── AuthController.java          # POST /auth/login
-│   ├── ResourceController.java      # CRUD /resources
-│   └── ReservationController.java   # CRUD /reservations
-├── service/
-│   ├── AuthService.java
-│   ├── ResourceService.java
-│   ├── ReservationService.java
-│   └── DataInitializer.java         # Seeds ADMIN and USER on startup
-├── repository/
-│   ├── UserRepository.java
-│   ├── ResourceRepository.java
-│   └── ReservationRepository.java
-├── entity/
-│   ├── User.java
-│   ├── Role.java                    # Enum: ADMIN, USER
-│   ├── Resource.java
-│   ├── ResourceType.java            # Enum: MEETING_ROOM, CONFERENCE_HALL
-│   ├── Reservation.java
-│   └── ReservationStatus.java       # Enum: PENDING, CONFIRMED, CANCELLED
-├── dto/
-│   ├── LoginRequest.java
-│   ├── LoginResponse.java
-│   ├── ResourceRequest.java
-│   └── ReservationRequest.java
-├── security/
-│   ├── SecurityConfig.java
-│   ├── JwtService.java
-│   ├── JwtAuthenticationFilter.java
-│   └── CustomUserDetailsService.java
-├── exception/
-│   ├── GlobalExceptionHandler.java
-│   ├── ResourceNotFoundException.java
-│   └── BadRequestException.java
-└── config/
-    └── OpenApiConfig.java
-```
+### Authentication & Security
+- **`POST /auth/login`**: Authenticates credentials and returns a signed JWT bearer token.
+- **Stateless Session**: Every request is authenticated via `Authorization: Bearer <token>`.
+- **Password Encoding**: Passwords hashed with BCrypt.
+- **OpenAPI / Swagger UI**: Accessible at `/swagger-ui/index.html` and `/swagger-ui.html`.
+
+### Role-Based Access Control (RBAC)
+
+| Endpoint | Method | Required Role | Description |
+|---|---|---|---|
+| `/auth/login` | POST | Public | Authenticate user & retrieve JWT token |
+| `/swagger-ui/**` | GET | Public | Swagger UI API documentation |
+| `/v3/api-docs/**` | GET | Public | OpenAPI specification JSON |
+| `/resources` | GET | USER / ADMIN | List all available resources |
+| `/resources/{id}` | GET | USER / ADMIN | View specific resource details |
+| `/resources` | POST | ADMIN | Create a new resource |
+| `/resources/{id}` | PUT | ADMIN | Update resource details |
+| `/resources/{id}` | DELETE | ADMIN | Delete a resource |
+| `/reservations` | GET | USER / ADMIN | List reservations (USER sees own; ADMIN sees all) |
+| `/reservations/{id}` | GET | USER / ADMIN | Get reservation by ID (ownership enforced) |
+| `/reservations` | POST | USER / ADMIN | Create a new reservation |
+| `/reservations/{id}` | PUT | USER / ADMIN | Update a reservation (ownership enforced) |
+| `/reservations/{id}` | DELETE | USER / ADMIN | Cancel/delete a reservation (ownership enforced) |
+
+### Business Logic Safeguards
+- **Ownership Security**: `USER` accounts can **only** view, update, or delete reservations that belong to them. Attempting to access another user's reservation returns `404 Not Found`.
+- **Resource Deletion Safety**: A resource with active reservations **cannot** be deleted (returns `400 Bad Request` instead of DB 500 error).
+- **Cancelled Status Enforcement**: Cancelled reservations cannot be modified.
+- **Time Window Validation**: `startTime` must strictly precede `endTime`.
 
 ---
 
-## Prerequisites
+## Seed Credentials (Data Initializer)
 
-- Java 17+ (or Java 21)
-- Maven 3.8+
-- MySQL 8+
+On application startup, pre-seeded test accounts are created if they do not exist:
 
----
+| Role | Username | Password | Purpose |
+|---|---|---|---|
+| **ADMIN** | `admin` | `admin123` | Full access to manage resources and all reservations |
+| **USER** | `Laxmikant` | `user123` | Read-only resource access; create and manage own reservations |
 
-## Database Setup
-
-1. Start your MySQL server.
-2. Create the database:
-
-```sql
-CREATE DATABASE resource_booking;
-```
-
-The schema is auto-generated by Hibernate (`spring.jpa.hibernate.ddl-auto=update`), so no manual table creation is needed.
-
----
-
-## Environment Variables / Configuration
-
-Copy `application-example.properties` to `application.properties` and fill in your values:
-
-```properties
-# application.properties
-
-spring.datasource.url=jdbc:mysql://localhost:3306/resource_booking
-spring.datasource.username=YOUR_DB_USERNAME
-spring.datasource.password=YOUR_DB_PASSWORD
-
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
-
-# JWT secret (Base64-encoded string, min 256-bit recommended)
-jwt.secret=YOUR_JWT_SECRET_BASE64
-# Token expiry in milliseconds (86400000 = 24 hours)
-jwt.expiration=86400000
-```
-
-> **Tip:** You can generate a Base64 secret by running:
+> **Production Security Note**: Seed credentials and JWT secret keys (`jwt.secret`) can be overridden via environment variables:
 > ```bash
-> echo -n "YourSecretKeyHere_AtLeast32Chars!!" | base64
+> export JWT_SECRET="YourVeryLongAndSecureSecretKeyWithAtLeast256BitsOfEntropyString"
+> export SEED_ADMIN_PASSWORD="YourSecureAdminPassword"
+> export SEED_USER_PASSWORD="YourSecureUserPassword"
 > ```
 
 ---
 
-## Running the Application
+## API Documentation (Swagger / OpenAPI)
+
+Once the application is running, access Swagger UI in your browser:
+
+- **Swagger UI**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+- **OpenAPI JSON**: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
+
+To authenticate in Swagger UI:
+1. Call `POST /auth/login` with body:
+   ```json
+   {
+     "username": "admin",
+     "password": "admin123"
+   }
+   ```
+2. Copy the returned `token`.
+3. Click the **Authorize** button in Swagger UI, enter `Bearer <your_token>`, and click **Authorize**.
+
+---
+
+## Quick Start & Local Setup
+
+### Prerequisites
+- JDK 17 or JDK 21 installed.
+- Maven (or use the included `./mvnw` wrapper).
+
+### Build & Test
 
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd resource-booking
 
-# Build and run
+# Run unit and integration tests
+./mvnw clean test
+
+# Package the application
+./mvnw clean package -DskipTests
+```
+
+### Run Locally
+
+```bash
 ./mvnw spring-boot:run
 ```
 
-The application starts on **`http://localhost:8080`** by default.
+The application will start on `http://localhost:8080`.
 
 ---
 
-## Seed Users (Auto-created on First Startup)
+## Environment Configuration
 
-The `DataInitializer` component automatically creates the following users when the application starts (only if they don't already exist):
+Configuration properties can be set via `src/main/resources/application.properties` or environment variables:
 
-| Username | Password | Role |
-|---|---|---|
-| `admin` | `admin123` | `ADMIN` |
-| `Laxmikant` | `user123` | `USER` |
-
-Passwords are stored as BCrypt hashes.
-
-> **Production Security Note:** The seed accounts above (`admin` and `Laxmikant`) are provided strictly for local development, testing, and evaluation purposes. In a production environment, seed credentials must be disabled or managed securely via environment variables and secret managers.
-
----
-
-## API Documentation (Swagger UI)
-
-Interactive API documentation is available at:
-
-```
-http://localhost:8080/swagger-ui.html
-```
-
-Or the raw OpenAPI spec at:
-
-```
-http://localhost:8080/v3/api-docs
-```
-
-> The Swagger UI is publicly accessible — no token required to view it. Use the **Authorize** button to enter your JWT token and test protected endpoints.
+| Property | Environment Variable | Default Value | Description |
+|---|---|---|---|
+| `spring.datasource.url` | `SPRING_DATASOURCE_URL` | `jdbc:mysql://localhost:3306/resource_booking` | Database connection URL |
+| `spring.datasource.username` | `SPRING_DATASOURCE_USERNAME` | `root` | Database username |
+| `spring.datasource.password` | `SPRING_DATASOURCE_PASSWORD` | `admin` | Database password |
+| `jwt.secret` | `JWT_SECRET` | `VGhpc0lzQVNlY3JldEtleUZvclJlc291cmNlQm9va2luZ1N5c3RlbQ==` | 256-bit JWT secret key |
+| `jwt.expiration` | `JWT_EXPIRATION` | `86400000` (24 hours) | Token validity in milliseconds |
 
 ---
 
-## Authentication
+## API Usage Examples
 
-### Login
+### 1. Login (Retrieve Token)
 
-```
+**Request:**
+```http
 POST /auth/login
 Content-Type: application/json
-```
 
-**Request Body:**
-```json
 {
-  "username": "admin",
-  "password": "admin123"
+  "username": "Laxmikant",
+  "password": "user123"
 }
 ```
 
-**Response:**
+**Response (200 OK):**
 ```json
 {
-  "token": "<JWT_TOKEN>"
+  "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJMYXhtaWthbnQiLCJyb2xlIjoiVVNFUiIsImlhdCI6MTY5MzAwMDAwMCwiZXhwIjoxNjkzMDg2NDAwfQ..."
 }
-```
-
-Use the returned token in the `Authorization` header for all protected requests:
-
-```
-Authorization: Bearer <JWT_TOKEN>
 ```
 
 ---
 
-## API Endpoints
+### 2. Get Available Resources
 
-### Resources
-
-| Method | Endpoint | Role Required | Description |
-|---|---|---|---|
-| `GET` | `/resources` | Any authenticated user | List all resources |
-| `GET` | `/resources/{id}` | Any authenticated user | Get a resource by ID |
-| `POST` | `/resources` | `ADMIN` only | Create a new resource |
-| `PUT` | `/resources/{id}` | `ADMIN` only | Update a resource |
-| `DELETE` | `/resources/{id}` | `ADMIN` only | Delete a resource |
-
-**Resource Request Body (POST / PUT):**
-```json
-{
-  "name": "Board Room A",
-  "type": "MEETING_ROOM",
-  "capacity": 10
-}
+**Request:**
+```http
+GET /resources
+Authorization: Bearer <token>
 ```
 
-> Available `type` values: `MEETING_ROOM`, `CONFERENCE_HALL`
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "name": "Conference Hall A",
+    "type": "CONFERENCE_HALL",
+    "capacity": 50
+  },
+  {
+    "id": 2,
+    "name": "Meeting Room 101",
+    "type": "MEETING_ROOM",
+    "capacity": 8
+  }
+]
+```
 
 ---
 
-### Reservations
+### 3. Create a Reservation
 
-| Method | Endpoint | Role Required | Description |
-|---|---|---|---|
-| `POST` | `/reservations` | Any authenticated user | Create a reservation |
-| `GET` | `/reservations` | Any authenticated user | List reservations (with filtering & pagination) |
-| `GET` | `/reservations/{id}` | Any authenticated user | Get a reservation by ID |
-| `PUT` | `/reservations/{id}` | Any authenticated user | Update a reservation |
-| `DELETE` | `/reservations/{id}` | Any authenticated user | Delete a reservation |
+**Request:**
+```http
+POST /reservations
+Authorization: Bearer <token>
+Content-Type: application/json
 
-> **Ownership Rule:** `USER` can only view/modify their own reservations. `ADMIN` can access all reservations.
-> **Identity is extracted from the JWT token** — users cannot spoof ownership via the request body.
-
-**Reservation Request Body (POST / PUT):**
-```json
 {
   "resourceId": 1,
-  "startTime": "2026-09-01T09:00:00",
-  "endTime": "2026-09-01T11:00:00",
-  "price": 150.00
+  "startTime": "2026-09-01T10:00:00",
+  "endTime": "2026-09-01T12:00:00",
+  "price": 150.00,
+  "status": "PENDING"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "id": 1,
+  "resource": {
+    "id": 1,
+    "name": "Conference Hall A",
+    "type": "CONFERENCE_HALL",
+    "capacity": 50
+  },
+  "user": {
+    "id": 2,
+    "username": "Laxmikant",
+    "role": "USER"
+  },
+  "startTime": "2026-09-01T10:00:00",
+  "endTime": "2026-09-01T12:00:00",
+  "price": 150.00,
+  "status": "PENDING"
 }
 ```
 
 ---
 
-### Filtering, Pagination & Sorting
+### 4. Search & Filter Reservations (with Pagination and Sorting)
 
-The `GET /reservations` endpoint supports the following query parameters:
-
-| Parameter | Type | Description | Example |
-|---|---|---|---|
-| `status` | String | Filter by reservation status | `PENDING`, `CONFIRMED`, `CANCELLED` |
-| `minPrice` | Decimal | Minimum price filter | `100.00` |
-| `maxPrice` | Decimal | Maximum price filter | `500.00` |
-| `page` | Integer | Page number (0-indexed, default: `0`) | `0` |
-| `size` | Integer | Page size (default: `5`) | `10` |
-| `sort` | String | Sort field and direction | `price,asc` or `startTime,desc` |
-
-**Example Request:**
-```
-GET /reservations?status=CONFIRMED&minPrice=100&maxPrice=500&page=0&size=10&sort=price,asc
-Authorization: Bearer <JWT_TOKEN>
+**Request:**
+```http
+GET /reservations?status=PENDING&minPrice=50&maxPrice=200&page=0&size=5&sort=startTime,desc
+Authorization: Bearer <token>
 ```
 
----
-
-## Reservation Statuses
-
-| Status | Description |
-|---|---|
-| `PENDING` | Reservation created, awaiting confirmation |
-| `CONFIRMED` | Reservation has been confirmed |
-| `CANCELLED` | Reservation has been cancelled |
-
----
-
-## Authorization & RBAC Summary
-
-| Action | ADMIN | USER |
-|---|---|---|
-| View resources | Yes | Yes |
-| Create / Update / Delete resources | Yes | No |
-| Create a reservation | Yes | Yes |
-| View own reservations | Yes | Yes |
-| View all reservations | Yes | No |
-| Update / Delete own reservation | Yes | Yes |
-| Update / Delete any reservation | Yes | No |
+**Response (200 OK):**
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "resource": { "id": 1, "name": "Conference Hall A", "type": "CONFERENCE_HALL", "capacity": 50 },
+      "user": { "id": 2, "username": "Laxmikant", "role": "USER" },
+      "startTime": "2026-09-01T10:00:00",
+      "endTime": "2026-09-01T12:00:00",
+      "price": 150.00,
+      "status": "PENDING"
+    }
+  ],
+  "pageable": { "pageNumber": 0, "pageSize": 5 },
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
 
 ---
 
-## Validation Rules
+### 5. Create Resource (ADMIN Only)
 
-| Field | Rule |
-|---|---|
-| `name` (Resource) | Required, non-blank |
-| `type` (Resource) | Required, must be a valid `ResourceType` |
-| `capacity` (Resource) | Required, minimum value of `1` |
-| `resourceId` (Reservation) | Required |
-| `startTime` (Reservation) | Required |
-| `endTime` (Reservation) | Required |
-| `price` (Reservation) | Required, must be >= 0.0 |
+**Request:**
+```http
+POST /resources
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "name": "Executive Boardroom",
+  "type": "MEETING_ROOM",
+  "capacity": 16
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "id": 3,
+  "name": "Executive Boardroom",
+  "type": "MEETING_ROOM",
+  "capacity": 16
+}
+```
+
+---
+
+## Data Validation Rules
+
+- `name`: Must not be blank.
+- `capacity`: Must be an integer >= 1.
+- `startTime` / `endTime`: Must be non-null valid ISO ISO-8601 datetimes; `startTime` must precede `endTime`.
+- `price`: Must be >= 0.00.
 
 Validation errors return `400 Bad Request` with field-level error messages.
 
@@ -337,3 +330,4 @@ Validation errors return `400 Bad Request` with field-level error messages.
 - **BCrypt** password hashing for all stored credentials.
 - **CSRF** disabled (appropriate for stateless REST APIs).
 - User identity is always resolved from the JWT — never trusted from the request body.
+- Verified and fully compatible with Spring Boot 3.2.5 and Java 17/21 runtime environments.
