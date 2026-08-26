@@ -2,7 +2,6 @@ package com.booking.resourcebooking.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +14,7 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret:}")
+    @Value("${jwt.secret}")
     private String secret;
 
     @Value("${jwt.expiration:86400000}")
@@ -25,11 +24,10 @@ public class JwtService {
 
     @PostConstruct
     public void init() {
-        if (secret != null && !secret.isBlank() && secret.getBytes(StandardCharsets.UTF_8).length >= 32) {
-            this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        } else {
-            this.signingKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+        if (secret == null || secret.isBlank() || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("JWT secret must be configured and must be at least 256 bits (32 bytes) long");
         }
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     private SecretKey getSigningKey() {

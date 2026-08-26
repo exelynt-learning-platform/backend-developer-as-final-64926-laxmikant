@@ -62,27 +62,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             } catch (io.jsonwebtoken.JwtException e) {
                 log.warn("Invalid or expired JWT token: {}", e.getMessage());
-                if (!response.isCommitted()) {
-                    sendUnauthorizedJsonResponse(response, "Invalid or expired JWT token");
-                }
-                return;
             } catch (Exception e) {
                 log.warn("Error processing JWT token: {}", e.getMessage());
-                if (!response.isCommitted()) {
-                    sendUnauthorizedJsonResponse(response, "Authentication failed");
-                }
-                return;
             }
         }
 
         filterChain.doFilter(request, response);
-    }
-
-    private void sendUnauthorizedJsonResponse(HttpServletResponse response, String message) throws IOException {
-        SecurityContextHolder.clearContext();
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        response.getWriter().write("{\"error\":\"" + message + "\"}");
     }
 }
