@@ -20,13 +20,14 @@ public class JwtService {
     private long expiration;
 
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(
-                secret.getBytes(StandardCharsets.UTF_8)
-        );
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalArgumentException("JWT secret key must be at least 256 bits (32 bytes) long for security");
+        }
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String generateToken(String username, String role) {
-
         return Jwts.builder()
                 .subject(username)
                 .claim("role", role)
@@ -36,15 +37,11 @@ public class JwtService {
                 .compact();
     }
 
-
-    //to extract the username from JWT
     public String extractUsername(String token) {
-
         return getAllClaims(token).getSubject();
     }
 
     private Claims getAllClaims(String token) {
-
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
@@ -52,19 +49,13 @@ public class JwtService {
                 .getPayload();
     }
 
-    //validating jwt to check whether it is modified and  expired or not.
     public boolean isTokenValid(String token, String username) {
-
         String extractedUsername = extractUsername(token);
-
-        return extractedUsername.equals(username)
-                && !isTokenExpired(token);
+        return extractedUsername.equals(username) && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {
-
         Date expirationDate = getAllClaims(token).getExpiration();
-
         return expirationDate.before(new Date());
     }
 }

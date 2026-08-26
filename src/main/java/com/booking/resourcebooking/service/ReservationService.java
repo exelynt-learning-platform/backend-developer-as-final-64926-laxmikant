@@ -2,7 +2,11 @@ package com.booking.resourcebooking.service;
 
 import com.booking.resourcebooking.dto.ReservationRequest;
 import com.booking.resourcebooking.dto.ReservationResponse;
-import com.booking.resourcebooking.entity.*;
+import com.booking.resourcebooking.entity.Reservation;
+import com.booking.resourcebooking.entity.ReservationStatus;
+import com.booking.resourcebooking.entity.Resource;
+import com.booking.resourcebooking.entity.Role;
+import com.booking.resourcebooking.entity.User;
 import com.booking.resourcebooking.exception.BadRequestException;
 import com.booking.resourcebooking.exception.ResourceNotFoundException;
 import com.booking.resourcebooking.repository.ReservationRepository;
@@ -13,8 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class ReservationService {
@@ -61,9 +63,7 @@ public class ReservationService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (user.getRole() != Role.ADMIN && !reservation.getUser().getId().equals(user.getId())) {
-            throw new ResourceNotFoundException("You can only access your own reservations");
-        }
+        validateOwnershipOrAdmin(reservation, user, "You can only access your own reservations");
 
         return ReservationResponse.fromEntity(reservation);
     }
@@ -75,9 +75,7 @@ public class ReservationService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (user.getRole() != Role.ADMIN && !reservation.getUser().getId().equals(user.getId())) {
-            throw new ResourceNotFoundException("You can only update your own reservations");
-        }
+        validateOwnershipOrAdmin(reservation, user, "You can only update your own reservations");
 
         if (reservation.getStatus() == ReservationStatus.CANCELLED) {
             throw new BadRequestException("Cannot update a cancelled reservation");
@@ -109,9 +107,7 @@ public class ReservationService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (user.getRole() != Role.ADMIN && !reservation.getUser().getId().equals(user.getId())) {
-            throw new ResourceNotFoundException("You can only delete your own reservations");
-        }
+        validateOwnershipOrAdmin(reservation, user, "You can only delete your own reservations");
 
         reservationRepository.delete(reservation);
     }
@@ -126,10 +122,20 @@ public class ReservationService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Page<Reservation> page = (user.getRole() == Role.ADMIN)
+        Page<Reservation> page = isAdmin(user)
                 ? reservationRepository.searchReservations(null, status, minPrice, maxPrice, pageable)
                 : reservationRepository.searchReservations(user, status, minPrice, maxPrice, pageable);
 
         return page.map(ReservationResponse::fromEntity);
+    }
+
+    private boolean isAdmin(User user) {
+        return user != null && user.getRole() == Role.ADMIN;
+    }
+
+    private void validateOwnershipOrAdmin(Reservation reservation, User user, String actionErrorMessage) {
+        if (!isAdmin(user) && !reservation.getUser().getId().equals(user.getId())) {
+            throw new ResourceNotFoundException(actionErrorMessage);
+        }
     }
 }

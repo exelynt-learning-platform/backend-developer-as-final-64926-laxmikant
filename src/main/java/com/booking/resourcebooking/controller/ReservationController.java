@@ -43,18 +43,7 @@ public class ReservationController {
             Authentication authentication) {
 
         String username = authentication.getName();
-
-        Pageable pageable;
-        if (sort != null && !sort.isBlank()) {
-            String[] sortParts = sort.split(",");
-            String property = sortParts[0].trim();
-            Sort.Direction direction = (sortParts.length > 1 && "desc".equalsIgnoreCase(sortParts[1].trim()))
-                    ? Sort.Direction.DESC
-                    : Sort.Direction.ASC;
-            pageable = PageRequest.of(page, size, Sort.by(direction, property));
-        } else {
-            pageable = PageRequest.of(page, size);
-        }
+        Pageable pageable = createPageable(page, size, sort);
 
         return reservationService.searchReservations(
                 username,
@@ -88,5 +77,17 @@ public class ReservationController {
             Authentication authentication) {
         String username = authentication.getName();
         reservationService.deleteReservation(id, username);
+    }
+
+    private Pageable createPageable(int page, int size, String sort) {
+        if (sort == null || sort.isBlank()) {
+            return PageRequest.of(page, size);
+        }
+        String[] sortParts = sort.split(",");
+        String property = sortParts[0].trim();
+        Sort.Direction direction = (sortParts.length > 1 && "desc".equalsIgnoreCase(sortParts[1].trim()))
+                ? Sort.Direction.DESC
+                : Sort.Direction.ASC;
+        return PageRequest.of(page, size, Sort.by(direction, property));
     }
 }
