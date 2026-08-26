@@ -26,7 +26,7 @@ class SecurityAuthorizationTest {
                         .content("""
                                 {
                                     "name": "Test Room",
-                                    "type": "ROOM",
+                                    "type": "MEETING_ROOM",
                                     "capacity": 10
                                 }
                                 """)
