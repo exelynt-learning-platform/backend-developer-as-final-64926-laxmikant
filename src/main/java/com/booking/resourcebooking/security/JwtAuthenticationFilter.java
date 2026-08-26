@@ -4,6 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,6 +17,9 @@ import java.io.IOException;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
@@ -67,8 +72,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .setAuthentication(authentication);
                 }
             }
+        } catch (io.jsonwebtoken.JwtException e) {
+            // Expected: expired, malformed, or tampered token — request stays unauthenticated
+            log.warn("Invalid JWT token rejected: {}", e.getMessage());
         } catch (Exception e) {
-            // Invalid token then request will remain unauthenticated
+            // Unexpected error — log at warn level so it is not silently lost
+            log.warn("Unexpected error during JWT processing", e);
         }
 
         filterChain.doFilter(request, response);

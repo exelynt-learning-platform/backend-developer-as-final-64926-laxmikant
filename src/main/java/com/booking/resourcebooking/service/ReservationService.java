@@ -10,7 +10,6 @@ import com.booking.resourcebooking.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import com.booking.resourcebooking.entity.Role;
 
 import java.math.BigDecimal;
 import java.util.List;
