@@ -1,5 +1,6 @@
 package com.booking.resourcebooking.dto;
 
+import com.booking.resourcebooking.entity.ReservationStatus;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
@@ -20,6 +21,8 @@ public class ReservationRequest {
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = true, message = "Price cannot be negative")
     private BigDecimal price;
+
+    private ReservationStatus status;
 
     public Long getResourceId() {
         return resourceId;
@@ -51,5 +54,13 @@ public class ReservationRequest {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public ReservationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ReservationStatus status) {
+        this.status = status;
     }
 }

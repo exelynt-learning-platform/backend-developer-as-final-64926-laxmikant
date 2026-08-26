@@ -1,6 +1,7 @@
 package com.booking.resourcebooking.service;
 
 import com.booking.resourcebooking.dto.ReservationRequest;
+import com.booking.resourcebooking.dto.ReservationResponse;
 import com.booking.resourcebooking.entity.*;
 import com.booking.resourcebooking.exception.BadRequestException;
 import com.booking.resourcebooking.exception.ResourceNotFoundException;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ReservationService {
@@ -22,17 +24,14 @@ public class ReservationService {
     private final UserRepository userRepository;
 
     public ReservationService(ReservationRepository reservationRepository,
-                              ResourceRepository resourceRepository,
-                              UserRepository userRepository) {
+                               ResourceRepository resourceRepository,
+                               UserRepository userRepository) {
         this.reservationRepository = reservationRepository;
         this.resourceRepository = resourceRepository;
         this.userRepository = userRepository;
     }
 
-
-    public Reservation createReservation(ReservationRequest request,
-                                         String username) {
-
+    public ReservationResponse createReservation(ReservationRequest request, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -44,61 +43,52 @@ public class ReservationService {
         }
 
         Reservation reservation = new Reservation();
-
         reservation.setUser(user);
         reservation.setResource(resource);
         reservation.setStartTime(request.getStartTime());
         reservation.setEndTime(request.getEndTime());
         reservation.setPrice(request.getPrice());
-        reservation.setStatus(ReservationStatus.PENDING);
+        reservation.setStatus(request.getStatus() != null ? request.getStatus() : ReservationStatus.PENDING);
 
-        return reservationRepository.save(reservation);
+        Reservation saved = reservationRepository.save(reservation);
+        return ReservationResponse.fromEntity(saved);
     }
 
-    public List<Reservation> getReservations(String username) {
-
+    public List<ReservationResponse> getReservations(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (user.getRole() == Role.ADMIN) {
-            return reservationRepository.findAll();
-        }
+        List<Reservation> list = (user.getRole() == Role.ADMIN)
+                ? reservationRepository.findAll()
+                : reservationRepository.findByUser(user);
 
-        return reservationRepository.findByUser(user);
+        return list.stream()
+                .map(ReservationResponse::fromEntity)
+                .collect(Collectors.toList());
     }
 
-    public Reservation getReservationById(Long id, String username) {
-
+    public ReservationResponse getReservationById(Long id, String username) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation not found"));
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (user.getRole() == Role.ADMIN) {
-            return reservation;
-        }
-
-        if (!reservation.getUser().getId().equals(user.getId())) {
+        if (user.getRole() != Role.ADMIN && !reservation.getUser().getId().equals(user.getId())) {
             throw new ResourceNotFoundException("You can only access your own reservations");
         }
 
-        return reservation;
+        return ReservationResponse.fromEntity(reservation);
     }
 
-    public Reservation updateReservation(
-            Long id,
-            ReservationRequest request,
-            String username) {
-
+    public ReservationResponse updateReservation(Long id, ReservationRequest request, String username) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation not found"));
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (user.getRole() != Role.ADMIN &&
-                !reservation.getUser().getId().equals(user.getId())) {
+        if (user.getRole() != Role.ADMIN && !reservation.getUser().getId().equals(user.getId())) {
             throw new ResourceNotFoundException("You can only update your own reservations");
         }
 
@@ -117,27 +107,29 @@ public class ReservationService {
         reservation.setStartTime(request.getStartTime());
         reservation.setEndTime(request.getEndTime());
         reservation.setPrice(request.getPrice());
+        if (request.getStatus() != null) {
+            reservation.setStatus(request.getStatus());
+        }
 
-        return reservationRepository.save(reservation);
+        Reservation saved = reservationRepository.save(reservation);
+        return ReservationResponse.fromEntity(saved);
     }
 
     public void deleteReservation(Long id, String username) {
-
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation not found"));
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (user.getRole() != Role.ADMIN &&
-                !reservation.getUser().getId().equals(user.getId())) {
+        if (user.getRole() != Role.ADMIN && !reservation.getUser().getId().equals(user.getId())) {
             throw new ResourceNotFoundException("You can only delete your own reservations");
         }
 
         reservationRepository.delete(reservation);
     }
 
-    public Page<Reservation> searchReservations(
+    public Page<ReservationResponse> searchReservations(
             String username,
             ReservationStatus status,
             BigDecimal minPrice,
@@ -147,22 +139,10 @@ public class ReservationService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (user.getRole() == Role.ADMIN) {
-            return reservationRepository.searchReservations(
-                    null,
-                    status,
-                    minPrice,
-                    maxPrice,
-                    pageable
-            );
-        }
+        Page<Reservation> page = (user.getRole() == Role.ADMIN)
+                ? reservationRepository.searchReservations(null, status, minPrice, maxPrice, pageable)
+                : reservationRepository.searchReservations(user, status, minPrice, maxPrice, pageable);
 
-        return reservationRepository.searchReservations(
-                user,
-                status,
-                minPrice,
-                maxPrice,
-                pageable
-        );
+        return page.map(ReservationResponse::fromEntity);
     }
 }

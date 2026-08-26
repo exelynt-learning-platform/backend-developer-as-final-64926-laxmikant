@@ -1,45 +1,47 @@
 package com.booking.resourcebooking.service;
 
 import com.booking.resourcebooking.dto.ResourceRequest;
+import com.booking.resourcebooking.dto.ResourceResponse;
 import com.booking.resourcebooking.entity.Resource;
 import com.booking.resourcebooking.exception.ResourceNotFoundException;
 import com.booking.resourcebooking.repository.ResourceRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ResourceService {
 
     private final ResourceRepository resourceRepository;
 
-    //constructor dependency injection
     public ResourceService(ResourceRepository resourceRepository) {
         this.resourceRepository = resourceRepository;
     }
 
-    public List<Resource> getAllResources() {
-        return resourceRepository.findAll();
+    public List<ResourceResponse> getAllResources() {
+        return resourceRepository.findAll().stream()
+                .map(ResourceResponse::fromEntity)
+                .collect(Collectors.toList());
     }
 
-    public Resource createResource(ResourceRequest request) {
-
+    public ResourceResponse createResource(ResourceRequest request) {
         Resource resource = new Resource();
-
         resource.setName(request.getName());
         resource.setType(request.getType());
         resource.setCapacity(request.getCapacity());
 
-        return resourceRepository.save(resource);
+        Resource saved = resourceRepository.save(resource);
+        return ResourceResponse.fromEntity(saved);
     }
 
-    public Resource getResourceById(Long id) {
-        return resourceRepository.findById(id)
+    public ResourceResponse getResourceById(Long id) {
+        Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
+        return ResourceResponse.fromEntity(resource);
     }
 
-    public Resource updateResource(Long id, ResourceRequest request) {
-
+    public ResourceResponse updateResource(Long id, ResourceRequest request) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
 
@@ -47,15 +49,14 @@ public class ResourceService {
         resource.setType(request.getType());
         resource.setCapacity(request.getCapacity());
 
-        return resourceRepository.save(resource);
+        Resource saved = resourceRepository.save(resource);
+        return ResourceResponse.fromEntity(saved);
     }
 
     public void deleteResource(Long id) {
-
         if (!resourceRepository.existsById(id)) {
             throw new ResourceNotFoundException("Resource not found");
         }
-
         resourceRepository.deleteById(id);
     }
 }

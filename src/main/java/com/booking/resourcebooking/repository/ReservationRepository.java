@@ -11,9 +11,6 @@ import org.springframework.data.jpa.repository.Query;
 import java.math.BigDecimal;
 import java.util.List;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
     List<Reservation> findByUser(User user);

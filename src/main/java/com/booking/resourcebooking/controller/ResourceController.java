@@ -1,11 +1,10 @@
 package com.booking.resourcebooking.controller;
 
 import com.booking.resourcebooking.dto.ResourceRequest;
-import com.booking.resourcebooking.entity.Resource;
+import com.booking.resourcebooking.dto.ResourceResponse;
 import com.booking.resourcebooking.service.ResourceService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
@@ -20,25 +19,24 @@ public class ResourceController {
     }
 
     @GetMapping
-    public List<Resource> getAllResources() {
+    public List<ResourceResponse> getAllResources() {
         return resourceService.getAllResources();
     }
 
     @PostMapping
-    public Resource createResource(@Valid @RequestBody ResourceRequest request) {
+    public ResourceResponse createResource(@Valid @RequestBody ResourceRequest request) {
         return resourceService.createResource(request);
     }
 
     @GetMapping("/{id}")
-    public Resource getResourceById(@PathVariable Long id) {
+    public ResourceResponse getResourceById(@PathVariable Long id) {
         return resourceService.getResourceById(id);
     }
 
     @PutMapping("/{id}")
-    public Resource updateResource(
+    public ResourceResponse updateResource(
             @PathVariable Long id,
             @Valid @RequestBody ResourceRequest request) {
-
         return resourceService.updateResource(id, request);
     }
 
