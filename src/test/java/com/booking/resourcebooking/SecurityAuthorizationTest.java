@@ -30,7 +30,7 @@ class SecurityAuthorizationTest {
                                     "capacity": 10
                                 }
                                 """)
-        ).andExpect(status().isForbidden());
+        ).andExpect(status().isUnauthorized());
     }
 
     @Test

@@ -102,6 +102,10 @@ public class ReservationService {
             throw new ResourceNotFoundException("You can only update your own reservations");
         }
 
+        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+            throw new BadRequestException("Cannot update a cancelled reservation");
+        }
+
         Resource resource = resourceRepository.findById(request.getResourceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
 
