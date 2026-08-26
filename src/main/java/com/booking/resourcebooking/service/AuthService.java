@@ -34,7 +34,7 @@ public class AuthService {
         );
 
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new com.booking.resourcebooking.exception.ResourceNotFoundException("User not found"));
 
         String token = jwtService.generateToken(
                 user.getUsername(),

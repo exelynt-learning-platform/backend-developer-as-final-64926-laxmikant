@@ -3,7 +3,9 @@ package com.booking.resourcebooking.service;
 import com.booking.resourcebooking.dto.ResourceRequest;
 import com.booking.resourcebooking.dto.ResourceResponse;
 import com.booking.resourcebooking.entity.Resource;
+import com.booking.resourcebooking.exception.BadRequestException;
 import com.booking.resourcebooking.exception.ResourceNotFoundException;
+import com.booking.resourcebooking.repository.ReservationRepository;
 import com.booking.resourcebooking.repository.ResourceRepository;
 import org.springframework.stereotype.Service;
 
@@ -14,9 +16,12 @@ import java.util.stream.Collectors;
 public class ResourceService {
 
     private final ResourceRepository resourceRepository;
+    private final ReservationRepository reservationRepository;
 
-    public ResourceService(ResourceRepository resourceRepository) {
+    public ResourceService(ResourceRepository resourceRepository,
+                           ReservationRepository reservationRepository) {
         this.resourceRepository = resourceRepository;
+        this.reservationRepository = reservationRepository;
     }
 
     public List<ResourceResponse> getAllResources() {
@@ -56,6 +61,9 @@ public class ResourceService {
     public void deleteResource(Long id) {
         if (!resourceRepository.existsById(id)) {
             throw new ResourceNotFoundException("Resource not found");
+        }
+        if (reservationRepository.existsByResourceId(id)) {
+            throw new BadRequestException("Cannot delete resource with associated reservations");
         }
         resourceRepository.deleteById(id);
     }

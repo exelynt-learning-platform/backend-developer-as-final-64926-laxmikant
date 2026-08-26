@@ -64,7 +64,7 @@ src/main/java/com/booking/resourcebooking/
 
 ## Prerequisites
 
-- Java 17+
+- Java 17+ (or Java 21)
 - Maven 3.8+
 - MySQL 8+
 

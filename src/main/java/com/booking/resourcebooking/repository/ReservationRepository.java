@@ -15,6 +15,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     List<Reservation> findByUser(User user);
 
+    boolean existsByResourceId(Long resourceId);
+
     @Query("""
             SELECT r FROM Reservation r
             WHERE (:user IS NULL OR r.user = :user)
