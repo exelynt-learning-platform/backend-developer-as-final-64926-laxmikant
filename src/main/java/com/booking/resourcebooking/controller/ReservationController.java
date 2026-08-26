@@ -47,15 +47,11 @@ public class ReservationController {
         Pageable pageable;
         if (sort != null && !sort.isBlank()) {
             String[] sortParts = sort.split(",");
-            if (sortParts.length == 2) {
-                pageable = PageRequest.of(
-                        page,
-                        size,
-                        Sort.by(Sort.Direction.fromString(sortParts[1]), sortParts[0])
-                );
-            } else {
-                pageable = PageRequest.of(page, size, Sort.by(sortParts[0]));
-            }
+            String property = sortParts[0].trim();
+            Sort.Direction direction = (sortParts.length > 1 && "desc".equalsIgnoreCase(sortParts[1].trim()))
+                    ? Sort.Direction.DESC
+                    : Sort.Direction.ASC;
+            pageable = PageRequest.of(page, size, Sort.by(direction, property));
         } else {
             pageable = PageRequest.of(page, size);
         }

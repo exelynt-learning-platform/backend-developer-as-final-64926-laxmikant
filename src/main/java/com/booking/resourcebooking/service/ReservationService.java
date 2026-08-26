@@ -54,19 +54,6 @@ public class ReservationService {
         return ReservationResponse.fromEntity(saved);
     }
 
-    public List<ReservationResponse> getReservations(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        List<Reservation> list = (user.getRole() == Role.ADMIN)
-                ? reservationRepository.findAll()
-                : reservationRepository.findByUser(user);
-
-        return list.stream()
-                .map(ReservationResponse::fromEntity)
-                .collect(Collectors.toList());
-    }
-
     public ReservationResponse getReservationById(Long id, String username) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation not found"));

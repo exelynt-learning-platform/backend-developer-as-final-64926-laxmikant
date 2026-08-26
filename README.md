@@ -137,6 +137,8 @@ The `DataInitializer` component automatically creates the following users when t
 
 Passwords are stored as BCrypt hashes.
 
+> **Production Security Note:** The seed accounts above (`admin` and `Laxmikant`) are provided strictly for local development, testing, and evaluation purposes. In a production environment, seed credentials must be disabled or managed securely via environment variables and secret managers.
+
 ---
 
 ## API Documentation (Swagger UI)
